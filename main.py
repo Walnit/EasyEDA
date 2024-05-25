@@ -2,8 +2,9 @@ import sys
 import csv
 import time
 import serial
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+import numpy as np
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtCore
 
 if len(sys.argv) != 2:
     print("Usage: main.py <port, e.g. /dev/rfcomm0 (Linux), COM3 (Windows)>")
@@ -11,51 +12,49 @@ if len(sys.argv) != 2:
     sys.exit(1)
 
 port = sys.argv[1]
-fig = plt.figure()
-ax = fig.add_subplot(1,1,1)
+app = pg.mkQApp("EasyEDA")
+win = pg.GraphicsLayoutWidget(show=True, title="Sensor Signals")
+win.resize(1000,600)
+pg.setConfigOptions(antialias=True)
 
-eda_history = []
-hr_history = []
-temp_history = []
-time_history = []
-sampling = 0
+plot = win.addPlot()
+eda_curve = plot.plot(pen=(0, 0, 255), name="EDA")
+hr_curve = plot.plot(pen=(0, 255, 0), name="Heart Rate")
+temp_curve = plot.plot(pen=(255, 0, 0), name="Temperature")
 
-def get_data(ser):
-    while True:
-        data = ser.readline().strip()
-        try:
-            eda, hr, temp = data.split()
-            return int(eda), int(hr), int(temp)
-        except:
-            print("Malformed input, skipping")
+eda_history = np.array([], dtype=np.int32)
+hr_history = np.array([], dtype=np.int32)
+temp_history = np.array([], dtype=np.int32)
+time_history = np.array([], dtype=np.int64)
 
-def plot_data(_, ax, ser, csvwriter):
-    # Get data, write to file
-    eda, hr, temp = get_data(ser)
-    now = time.time_ns() // 1000 # microseconds since epoch
-    csvwriter.writerow([now, eda, hr, temp])
-    global sampling
-    if sampling % 10 == 9: # only graph every 10 frames for performance
+def update(ser, csvwriter):
+    data = ser.readline().strip()
+    try:
+        eda, hr, temp = data.split()
+        eda, hr, temp = int(eda), int(hr), int(temp)
+        now = time.time_ns() // 1000 # microseconds since epoch
+        csvwriter.writerow([now, eda, hr, temp])
+        global eda_history, hr_history, temp_history, time_history, eda_curve, hr_curve, temp_curve
         # Pop first element if buffer too large
-        if len(eda_history) > 200:
-            eda_history.pop(0)
-            hr_history.pop(0)
-            temp_history.pop(0)
-            time_history.pop(0)
+        if eda_history.size > 200:
+            plot.enableAutoRange('xy', False)
+            eda_history = np.delete(eda_history, 0)
+            hr_history = np.delete(hr_history, 0)
+            temp_history = np.delete(temp_history, 0)
+            time_history = np.delete(time_history, 0)
 
         # Write to buffer
-        eda_history.append(eda)
-        hr_history.append(hr)
-        temp_history.append(temp)
-        time_history.append(now)
+        eda_history = np.append(eda_history, eda)
+        hr_history = np.append(hr_history, hr)
+        temp_history = np.append(temp_history, temp)
+        time_history = np.append(time_history, now)
 
-        # Plot buffer
-        ax.clear()
-        ax.plot(time_history,eda_history, color="blue")
-        ax.plot(time_history, hr_history, color="green")
-        ax.plot(time_history, temp_history, color="red")
+        eda_curve.setData(eda_history)
+        hr_curve.setData(hr_history)
+        temp_curve.setData(temp_history)
 
-    sampling += 1
+    except ValueError:
+        print("Malformed input, skipping")
 
 
 with serial.Serial(port, baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE) as ser:
@@ -63,6 +62,8 @@ with serial.Serial(port, baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial
     with open("data.csv", "w", newline="") as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=",")
         csvwriter.writerow(["Time", "EDA", "Heart Rate", "Temperature"])
-        an = animation.FuncAnimation(fig, plot_data, fargs=(ax, ser, csvwriter), interval=0, blit=True)
-        plt.show()
+        timer = QtCore.QTimer()
+        timer.timeout.connect(lambda: update(ser, csvwriter))
+        timer.start(1)
+        pg.exec()
 
