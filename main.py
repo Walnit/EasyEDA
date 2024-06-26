@@ -55,18 +55,19 @@ previous_time = 0
 print(schedule)
 
 def next():
-    print("pressed!")
-    global previous_time, curr_text, schedule_index
-    if previous_time == 0: # paused
-        print("paused")
-        schedule_index += 1
-        if schedule[schedule_index][0] != 'pause':
-            previous_time = time.time()
-            curr_text.setText(f"{schedule[schedule_index][1]} for {schedule[schedule_index][0]}s")
-            csvwriter.writerow([f"BEGIN {schedule[schedule_index][1]} FOR {schedule[schedule_index][0]} SECONDS", "", "", ""])
-            print(f"{schedule[schedule_index][1]} for {schedule[schedule_index][0]}s")
-    else: # not paused, trigger next
+    global previous_time, curr_text, schedule_index, schedule
+    schedule_index += 1
+    if schedule_index >= len(schedule):
+        # Quit App
+        pg.exit()
+
+    if schedule[schedule_index][0] != 'pause':
+        previous_time = time.time()
+        csvwriter.writerow([f"BEGIN {schedule[schedule_index][1]} FOR {schedule[schedule_index][0]} SECONDS", "", "", ""])
+        curr_text.setText(f"{schedule[schedule_index][1]} for {schedule[schedule_index][0]}s")
+    else:
         previous_time = 0
+        curr_text.setText("Paused, press next")
 
 next_btn.clicked.connect(next)
 
@@ -77,16 +78,7 @@ def update(ser, csvwriter):
         try:
             # Schedule stuff
             if time.time() - previous_time > int(schedule[schedule_index][0]):
-                csvwriter.writerow([f"END {schedule[schedule_index][1]} FOR {schedule[schedule_index][0]} SECONDS", "", "", ""])
-                print(f"END {schedule[schedule_index][1]} FOR {schedule[schedule_index][0]} SECONDS")
-                schedule_index += 1
-                if schedule[schedule_index][0] != 'pause':
-                    previous_time = time.time()
-                    csvwriter.writerow([f"BEGIN {schedule[schedule_index][1]} FOR {schedule[schedule_index][0]} SECONDS", "", "", ""])
-                    curr_text.setText(f"{schedule[schedule_index][1]} for {schedule[schedule_index][0]}s")
-                else:
-                    previous_time = 0
-                    curr_text.setText("Paused, press next")
+                next()
 
             # Data stuff
             eda, hr, temp = data.split()
@@ -129,4 +121,5 @@ with serial.Serial(port, baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial
         timer.timeout.connect(lambda: update(ser, csvwriter))
         timer.start(1)
         pg.exec()
+
 

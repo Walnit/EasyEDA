@@ -1,8 +1,7 @@
+10 baseline
+5 website
 pause
-120 baseline
-20 website https://www.youtube.com/watch?v=La-zTFcv1Tk
+10 baseline
+5 website
+10 baseline
 pause
-120 baseline
-20 website https://www.youtube.com/watch?v=O7fb3ux2nDI
-pause
-120 baseline
