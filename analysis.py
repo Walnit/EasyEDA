@@ -5,12 +5,13 @@ df = pd.read_csv("data.csv")
 df.iloc[1:,1] = pd.to_numeric(df.iloc[1:,1],errors="coerce")
 df.iloc[1:,2] = pd.to_numeric(df.iloc[1:,2],errors="coerce")
 df.iloc[1:,3] = pd.to_numeric(df.iloc[1:,3],errors="coerce")
-df.dropna(inplace=True)
-ls = [i for i, x in enumerate(df.set_index('Time').index == "BEGIN baseline FOR 120 SECONDS") if x]
+ls = [i for i, x in enumerate(df.set_index('Time').index.str.contains("BEGIN")) if x]
+print(df.set_index('Time').index)
 prev = 0
 dfls = []
-for i in ls:
-    dfls.append(df.iloc[prev:i,:])
+for index, i in enumerate(ls):
+    print(i, index)
+    df.iloc[prev:i,:].to_csv(f"file_{index}.csv", index=False)
     prev = i
 df.iloc[:, 1:].plot()
 #plt.savefig("figure.png")

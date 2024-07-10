@@ -1,7 +1,8 @@
-10 baseline
-5 website
+180 baseline
 pause
-10 baseline
-5 website
-10 baseline
+600 sesh1
+300 break
 pause
+600 sesh2
+pause
+180 baseline
