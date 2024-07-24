@@ -1,8 +1,13 @@
 180 baseline
 pause
 600 sesh1
+pause
+300 exam
+pause
 300 break
 pause
 600 sesh2
 pause
-180 baseline
+300 exam
+pause
+300 baseline
