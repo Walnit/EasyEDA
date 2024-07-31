@@ -4,10 +4,21 @@ import matplotlib.pyplot as plt
 from scipy import signal
 from scipy import stats
 from cvxEDA import cvxEDA
+from tvsymp import apply_band_pass_filter, calculate_tvsymp_index
 
-df = pd.read_csv("file_2.csv")[1:]
+import re
+import sys
 
-duration = 600
+df = pd.read_csv(sys.argv[1])[1:]
+duration = 0
+
+with open(sys.argv[1]) as f:
+    _ = f.readline() # ignore schema
+    to_match = f.readline()
+    matched = re.search(r"BEGIN (.+?) FOR ([0-9]+?) SECONDS", to_match)
+    print("Analysing", matched.group(1))
+    duration = int(matched.group(2))
+
 og_sample_rate = len(df)/duration
 new_sample_rate = 25
 num_samples = int(new_sample_rate * duration)
@@ -37,18 +48,33 @@ for i in range(len(r)):
         if((r[i-1] < r[i]) and (r[i+1] < r[i])):
             r_peak_count += 1
 
-print(r_peak_count)
-print(np.std(r))
+print("Total NSSCR peaks", r_peak_count)
+print("NSSCR per minute", r_peak_count/(duration/60))
+print("SCR Std Deviation", np.std(r))
+
+print("Mean SCL", t.mean())
+
+tvsymp_signal = calculate_tvsymp_index(signal.resample(eda_filtered, 2*duration))
+
 # plt.legend(['eda_resampled', 'eda_filtered', 'eda_n', 'r', 'p', 't'])
 # plt.plot(eda_filtered)
 # plt.plot(eda_n)
 # plt.show()
+plt.title("NSSCR")
 plt.plot(r)
 plt.show()
-plt.plot(p)
-plt.show()
+plt.title("SCL")
 plt.plot(t)
 plt.show()
+plt.title("TVSymp")
+plt.plot(tvsymp_signal)
+plt.show()
 
-
-
+fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+ax1.set_title("NSSCR")
+ax1.plot(r)
+ax2.set_title("SCL")
+ax2.plot(t)
+ax3.set_title("TVSymp")
+ax3.plot(tvsymp_signal)
+plt.show()
