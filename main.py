@@ -81,7 +81,13 @@ def update(ser, csvwriter):
                 next()
 
             # Data stuff
-            eda, hr, temp = data.split()
+            raw_values = data.split()
+            if len(raw_values) == 3:
+                eda, hr, temp = raw_values
+            elif len(raw_values) == 4:
+                _, eda, hr, temp = raw_values
+            else:
+                print("Uh oh debugging time", raw_values)
             eda, hr, temp = int(eda), int(hr), int(temp)
             now = time.time_ns() // 1000 # microseconds since epoch
             csvwriter.writerow([now, eda, hr, temp])
