@@ -8,6 +8,6 @@ pause
 pause
 600 sesh2
 pause
-300 exam
+180 exam
 pause
 300 baseline

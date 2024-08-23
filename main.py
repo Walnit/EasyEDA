@@ -116,7 +116,7 @@ def update(ser, csvwriter):
 
 with serial.Serial(port, baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE) as ser:
     print(ser)
-    with open("data.csv", "w", newline="") as csvfile:
+    with open("data"+sys.argv[1].replace('/','')+".csv", "w", newline="") as csvfile:
         csvwriter = csv.writer(csvfile, delimiter=",")
         csvwriter.writerow(["Time", "EDA", "Heart Rate", "Temperature"])
         if schedule[schedule_index][0] != 'pause':
