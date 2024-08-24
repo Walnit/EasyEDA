@@ -14,10 +14,13 @@ duration = 0
 
 with open(sys.argv[1]) as f:
     _ = f.readline() # ignore schema
-    to_match = f.readline()
-    matched = re.search(r"BEGIN (.+?) FOR ([0-9]+?) SECONDS", to_match)
-    print("Analysing", matched.group(1))
-    duration = int(matched.group(2))
+    try:
+        to_match = f.readline()
+        matched = re.search(r"BEGIN (.+?) FOR ([0-9]+?) SECONDS", to_match)
+        print("Analysing", matched.group(1))
+        duration = int(matched.group(2))
+    except:
+        print("Could not find section label. Continuing...")
 
 og_sample_rate = len(df)/duration
 new_sample_rate = 25
