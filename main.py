@@ -123,6 +123,7 @@ with serial.Serial(port, baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial
             previous_time = time.time()
             curr_text.setText(f"{schedule[schedule_index][1]} for {schedule[schedule_index][0]}s")
             csvwriter.writerow([f"BEGIN {schedule[schedule_index][1]} FOR {schedule[schedule_index][0]} SECONDS", "", "", ""])
+            csvwriter.flush()
         timer = QtCore.QTimer()
         timer.timeout.connect(lambda: update(ser, csvwriter))
         timer.start(1)

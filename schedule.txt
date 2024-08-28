@@ -1,4 +1,4 @@
-300 baseline
+180 baseline
 pause
 600 sesh1
 pause
