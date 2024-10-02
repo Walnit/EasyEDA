@@ -1,6 +1,7 @@
 from PyQt6.QtCore import QSize, Qt
 from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QPushButton, QLineEdit, QMessageBox
 from qt_helpers import *
+from qt_windows.ScanWindow import ScanWindow
 import sys
 
 class MainWindow(QMainWindow):
@@ -29,11 +30,11 @@ class MainWindow(QMainWindow):
 
         devices_row.addWidget(QLabel("Number of Devices:"))
 
-        num_devices_spin = QSpinBox()
-        num_devices_spin.setMinimum(1)
-        num_devices_spin.valueChanged.connect(self.num_devices_changed)
-        num_devices_spin.setValue(1)
-        devices_row.addWidget(num_devices_spin)
+        self.num_devices_spin = QSpinBox()
+        self.num_devices_spin.setMinimum(1)
+        self.num_devices_spin.valueChanged.connect(self.num_devices_changed)
+        self.num_devices_spin.setValue(1)
+        devices_row.addWidget(self.num_devices_spin)
 
         scan_btn = QPushButton("Scan")
         scan_btn.clicked.connect(self.scan_btn_clicked)
@@ -59,7 +60,46 @@ class MainWindow(QMainWindow):
 
 
     def scan_btn_clicked(self):
-        print("scan btn")
+        self.scan_window = ScanWindow()
+        self.scan_window.ports.connect(self.load_scanned_ports)
+        self.scan_window.show()
+
+    def load_scanned_ports(self, ports):
+        if len(ports) > 0:
+            self.num_devices_spin.setValue(len(ports))
+            self.clear_layout(self.devices_vbox)
+            self.participant_widgets = []
+            for i in range(1, len(ports)+1):
+            
+                participant_group = QVBoxLayout()
+
+                participant_group.addWidget(get_bold_label(f"Device {i}"))
+
+                id_row = QHBoxLayout()
+                id_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                id_row.addWidget(QLabel("Participant ID:"))
+                
+                id_edit = QLineEdit()
+                id_row.addWidget(id_edit)
+
+                id_row.addStretch()
+                participant_group.addLayout(id_row)
+
+                ser_row = QHBoxLayout()
+                ser_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                ser_row.addWidget(QLabel("Serial Port:"))
+                
+                ser_edit = QLineEdit()
+                ser_edit.setText(ports[i-1])
+                ser_row.addWidget(ser_edit)
+
+                ser_row.addStretch()
+                participant_group.addLayout(ser_row)
+
+                self.devices_vbox.addLayout(participant_group)
+                
+                self.participant_widgets.append((id_edit, ser_edit))
+
 
     def begin_btn_clicked(self):
         results = {}
