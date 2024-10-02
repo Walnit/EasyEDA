@@ -59,6 +59,9 @@ print("Mean SCL", t.mean())
 
 tvsymp_signal = calculate_tvsymp_index(signal.resample(eda_filtered, 2*duration))
 
+print("Mean TVSympt", tvsymp_signal.mean())
+print("TVSymp Std Dev", np.std(tvsymp_signal))
+
 # plt.legend(['eda_resampled', 'eda_filtered', 'eda_n', 'r', 'p', 't'])
 # plt.plot(eda_filtered)
 # plt.plot(eda_n)

@@ -1,132 +1,138 @@
+from PyQt6.QtCore import QSize, Qt
+from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QPushButton, QLineEdit, QMessageBox
+from qt_helpers import *
 import sys
-import csv
-import time
-import serial
-import numpy as np
-import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtWidgets
 
-from scheduler import parse_schedule
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
 
-if len(sys.argv) != 2:
-    print("Usage: main.py <port, e.g. /dev/rfcomm0 (Linux), COM3 (Windows)>")
-    print("Try 'python -m serial.tools.list_ports' to list ports")
-    sys.exit(1)
+        self.participant_widgets = []
 
-port = sys.argv[1]
-app = pg.mkQApp("EasyEDA")
-win = QtWidgets.QMainWindow()
-win.resize(1000,600)
-plot_widget = pg.GraphicsLayoutWidget(show=True, title="Sensor Signals")
+        self.setWindowTitle("EasyEDA")
+        self.setMinimumSize(QSize(1000, 600))
 
-cw = QtWidgets.QWidget()
-win.setCentralWidget(cw)
-l = QtWidgets.QHBoxLayout()
-cw.setLayout(l)
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-menu = QtWidgets.QVBoxLayout()
-curr_text = QtWidgets.QLabel("Paused, press next")
-next_btn = QtWidgets.QPushButton("Next")
-menu.addWidget(curr_text)
-menu.addWidget(next_btn)
+        main_label = QLabel("Experiment Configuration")
+        main_label_font = main_label.font()
+        main_label_font.setPointSize(24)
+        main_label_font.setBold(True)
+        main_label.setFont(main_label_font)
+        layout.addWidget(main_label)
 
-l.addWidget(plot_widget)
-l.addLayout(menu)
+        layout.addWidget(get_bold_label("Setup"))
 
-pg.setConfigOptions(antialias=True)
-win.show()
+        devices_row = QHBoxLayout()
+        devices_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
 
-plot = plot_widget.addPlot()
-eda_curve = plot.plot(pen=(0, 0, 255), name="EDA")
-hr_curve = plot.plot(pen=(0, 255, 0), name="Heart Rate")
-temp_curve = plot.plot(pen=(255, 0, 0), name="Temperature")
-plot.enableAutoRange('y', True)
+        devices_row.addWidget(QLabel("Number of Devices:"))
 
+        num_devices_spin = QSpinBox()
+        num_devices_spin.setMinimum(1)
+        num_devices_spin.valueChanged.connect(self.num_devices_changed)
+        num_devices_spin.setValue(1)
+        devices_row.addWidget(num_devices_spin)
 
-eda_history = np.array([], dtype=np.int32)
-hr_history = np.array([], dtype=np.int32)
-temp_history = np.array([], dtype=np.int32)
-time_history = np.array([], dtype=np.int64)
+        scan_btn = QPushButton("Scan")
+        scan_btn.clicked.connect(self.scan_btn_clicked)
+        devices_row.addWidget(scan_btn)
 
-# Scheduling 
-schedule = parse_schedule("schedule.txt")
-schedule_index = 0
-previous_time = 0
-print(schedule)
+        devices_row.addStretch()
+        layout.addLayout(devices_row)
 
-def next():
-    global previous_time, curr_text, schedule_index, schedule
-    schedule_index += 1
-    if schedule_index >= len(schedule):
-        # Quit App
-        pg.exit()
+        self.devices_vbox = QVBoxLayout()
+        devices_row.setAlignment(Qt.AlignmentFlag.AlignTop)
+        layout.addLayout(self.devices_vbox)
+        self.num_devices_changed(1)
 
-    if schedule[schedule_index][0] != 'pause':
-        previous_time = time.time()
-        csvwriter.writerow([f"BEGIN {schedule[schedule_index][1]} FOR {schedule[schedule_index][0]} SECONDS", "", "", ""])
-        curr_text.setText(f"{schedule[schedule_index][1]} for {schedule[schedule_index][0]}s")
-    else:
-        previous_time = 0
-        curr_text.setText("Paused, press next")
+        begin_btn = QPushButton("Begin")
+        begin_btn.clicked.connect(self.begin_btn_clicked)
 
-next_btn.clicked.connect(next)
+        layout.addStretch()
+        layout.addWidget(begin_btn)
 
-def update(ser, csvwriter):
-    data = ser.readline().strip()
-    global schedule, schedule_index, previous_time, curr_text
-    if schedule[schedule_index][0] != 'pause':
-        try:
-            # Schedule stuff
-            if time.time() - previous_time > int(schedule[schedule_index][0]):
-                next()
-
-            # Data stuff
-            raw_values = data.split()
-            if len(raw_values) == 3:
-                eda, hr, temp = raw_values
-            elif len(raw_values) == 4:
-                _, eda, hr, temp = raw_values
-            else:
-                print("Uh oh debugging time", raw_values)
-            eda, hr, temp = int(eda), int(hr), int(temp)
-            now = time.time_ns() // 1000 # microseconds since epoch
-            csvwriter.writerow([now, eda, hr, temp])
-            global eda_history, hr_history, temp_history, time_history, eda_curve, hr_curve, temp_curve
-            # Pop first element if buffer too large
-            if eda_history.size > 200:
-                plot.enableAutoRange('xy', False)
-                eda_history = np.delete(eda_history, 0)
-                hr_history = np.delete(hr_history, 0)
-                temp_history = np.delete(temp_history, 0)
-                time_history = np.delete(time_history, 0)
-
-            # Write to buffer
-            eda_history = np.append(eda_history, eda)
-            hr_history = np.append(hr_history, hr)
-            temp_history = np.append(temp_history, temp)
-            time_history = np.append(time_history, now)
-
-            eda_curve.setData(eda_history)
-            hr_curve.setData(hr_history)
-            temp_curve.setData(temp_history)
-
-        except ValueError:
-            print("Malformed input, skipping")
+        widget = QWidget()
+        widget.setLayout(layout)
+        self.setCentralWidget(widget)
 
 
-with serial.Serial(port, baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE) as ser:
-    print(ser)
-    with open("data"+sys.argv[1].replace('/','')+".csv", "w", newline="") as csvfile:
-        csvwriter = csv.writer(csvfile, delimiter=",")
-        csvwriter.writerow(["Time", "EDA", "Heart Rate", "Temperature"])
-        if schedule[schedule_index][0] != 'pause':
-            previous_time = time.time()
-            curr_text.setText(f"{schedule[schedule_index][1]} for {schedule[schedule_index][0]}s")
-            csvwriter.writerow([f"BEGIN {schedule[schedule_index][1]} FOR {schedule[schedule_index][0]} SECONDS", "", "", ""])
-            csvwriter.flush()
-        timer = QtCore.QTimer()
-        timer.timeout.connect(lambda: update(ser, csvwriter))
-        timer.start(1)
-        pg.exec()
+    def scan_btn_clicked(self):
+        print("scan btn")
 
+    def begin_btn_clicked(self):
+        results = {}
+        
+        # Check for any blanks
+        has_blanks = False
+        for id_edit, ser_edit in self.participant_widgets:
+            if id_edit.text().strip() == "" or ser_edit.text().strip() == "":
+                has_blanks = True
+                break
+
+        if not has_blanks:
+            for id_edit, ser_edit in self.participant_widgets:
+                results[id_edit.text().strip()] = ser_edit.text().strip()
+                print(results)
+        else:
+            QMessageBox.critical(self, "Error", "Please fill out all fields!")
+
+
+    def clear_layout(self, layout):
+        if layout is not None:
+            while layout.count():
+                item = layout.takeAt(0)
+                widget = item.widget()
+                if widget is not None:
+                    widget.deleteLater()
+                else:
+                    self.clear_layout(item.layout())
+
+
+    def num_devices_changed(self, value):
+        # Modify values to preserve existing values
+        if value < len(self.participant_widgets):
+            for i in range(len(self.participant_widgets)-value):
+                self.clear_layout(self.devices_vbox.takeAt(self.devices_vbox.count()-1))
+                self.participant_widgets.pop()
+
+        for i in range(len(self.participant_widgets)+1, value+1):
+            participant_group = QVBoxLayout()
+
+            participant_group.addWidget(get_bold_label(f"Device {i}"))
+
+            id_row = QHBoxLayout()
+            id_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            id_row.addWidget(QLabel("Participant ID:"))
+            
+            id_edit = QLineEdit()
+            id_row.addWidget(id_edit)
+
+            id_row.addStretch()
+            participant_group.addLayout(id_row)
+
+            ser_row = QHBoxLayout()
+            ser_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
+            ser_row.addWidget(QLabel("Serial Port:"))
+            
+            ser_edit = QLineEdit()
+            ser_row.addWidget(ser_edit)
+
+            ser_row.addStretch()
+            participant_group.addLayout(ser_row)
+
+            self.devices_vbox.addLayout(participant_group)
+            
+            self.participant_widgets.append((id_edit, ser_edit))
+
+
+
+
+app = QApplication(sys.argv)
+
+window = MainWindow()
+window.show()
+
+app.exec()
 
