@@ -1,7 +1,5 @@
 from PyQt6.QtCore import QSize, Qt, QObject, pyqtSignal, QThread, QMutex, QTimer
 from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QPushButton, QLineEdit, QMessageBox, QGridLayout, QComboBox
-from qt_helpers import *
-from qt_windows.SetupWindow import SetupWindow
 import sys, serial, traceback, time
 import pyqtgraph as pg
 import numpy as np
@@ -262,13 +260,3 @@ class MonitorWindow(QMainWindow):
 
         self.devices_ready = 0
         self.status_text.setText(f"Status: {self.devices_ready}/{len(self.participants_id)} Ready")
-
-
-app = QApplication(sys.argv)
-
-window = SetupWindow()
-# window = MonitorWindow({'1': '/dev/ttyUSB0'}, [[180, "Baseline"], [600, "Sesh1"], [300, "Exam"], [300, "Break"], [600, "Sesh2"], [120, "Exam"], [300, "Baseline"]])
-window.show()
-
-app.exec()
-
