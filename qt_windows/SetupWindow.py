@@ -1,8 +1,9 @@
 from PyQt6.QtCore import QSize, Qt
-from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QPushButton, QLineEdit, QMessageBox
+from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHBoxLayout, QLabel, QSpinBox, QPushButton, QLineEdit, QMessageBox, QFileDialog
 from qt_helpers import *
 from qt_windows.ScanWindow import ScanWindow
 from qt_windows.MonitorWindow import MonitorWindow
+import os
 
 class SetupWindow(QMainWindow):
     def __init__(self):
@@ -42,6 +43,21 @@ class SetupWindow(QMainWindow):
 
         devices_row.addStretch()
         layout.addLayout(devices_row)
+
+        schedule_row = QHBoxLayout()
+        schedule_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
+
+        schedule_row.addWidget(QLabel("Experiment Schedule:"))
+        self.schedule_edit = QLineEdit()
+        self.schedule_edit.setText("schedule.txt")
+        schedule_row.addWidget(self.schedule_edit)
+
+        schedule_btn = QPushButton("Browse Files...")
+        schedule_btn.clicked.connect(self.schedule_btn_clicked)
+        schedule_row.addWidget(schedule_btn)
+
+        schedule_row.addStretch()
+        layout.addLayout(schedule_row)
 
         self.devices_vbox = QVBoxLayout()
         devices_row.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -114,11 +130,18 @@ class SetupWindow(QMainWindow):
         if not has_blanks:
             for id_edit, ser_edit in self.participant_widgets:
                 results[id_edit.text().strip()] = ser_edit.text().strip()
-                # HARDCODED FOR NOW
-            schedule = [[180, "Baseline"], [600, "Sesh1"], [300, "Exam"], [300, "Break"], [600, "Sesh2"], [120, "Exam"], [300, "Baseline"]]
-            window = MonitorWindow(results, schedule)
-            self.hide()
-            window.show()
+                
+            filename = self.schedule_edit.text().strip()
+            if (os.path.isfile(filename)):
+                parsed = []
+                with open(filename) as f:
+                    lines = f.read().splitlines()
+                    parsed = [ line.split() for line in lines ]
+                window = MonitorWindow(results, parsed)
+                self.hide()
+                window.show()
+            else:
+                QMessageBox.critical(self, "Error", "Unable to access schedule file!")
 
             
         else:
@@ -171,3 +194,8 @@ class SetupWindow(QMainWindow):
             self.devices_vbox.addLayout(participant_group)
             
             self.participant_widgets.append((id_edit, ser_edit))
+
+    def schedule_btn_clicked(self):
+        filename, _ = QFileDialog.getOpenFileName(self, "Open File", "", "Text Files (*.txt)")
+        if filename:
+            self.schedule_edit.setText(filename)
