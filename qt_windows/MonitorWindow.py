@@ -28,12 +28,15 @@ class SerialWorker(QObject):
                     with open(f"{step}_id-{self.id}.log", "wb") as f:
                         ser.readline()
                         self.initialized.emit()
+                        print(f"ID {self.id} initialized for step {step}!")
                         while True:
                             for i in range(100):
                                 data = ser.readline()
                                 f.write(data)
-                                self.report.emit(data)
+                                if i % 20 == 19:
+                                    self.report.emit(data)
                             f.flush() # Flush every 100 samples (~2 seconds)
+                            
                             
                             self.step_mutex.lock()
                             if step != self.step_ptr[0]:
@@ -41,7 +44,7 @@ class SerialWorker(QObject):
                                 self.step_mutex.unlock()
                                 break
                             self.step_mutex.unlock()
-
+            print(f"ID {self.id} exiting!")
             self.finished.emit()
         except Exception as e:
             traceback.print_exc()
@@ -143,22 +146,25 @@ class MonitorWindow(QMainWindow):
         else: 
             return
 
-        eda, hr, temp = int(eda), int(hr), int(temp)
+        try:
+            eda, hr, temp = int(eda), int(hr), int(temp)
 
-        self.eda_history = np.append(self.eda_history, eda)
-        self.hr_history = np.append(self.hr_history, hr)
-        self.temp_history = np.append(self.temp_history, temp)
+            self.eda_history = np.append(self.eda_history, eda)
+            self.hr_history = np.append(self.hr_history, hr)
+            self.temp_history = np.append(self.temp_history, temp)
 
-        # Pop first element if buffer too large
-        if self.eda_history.size > 200:
-            self.plot.enableAutoRange('xy', False)
-            self.eda_history = np.delete(self.eda_history, 0)
-            self.hr_history = np.delete(self.hr_history, 0)
-            self.temp_history = np.delete(self.temp_history, 0)
+            # Pop first element if buffer too large
+            if self.eda_history.size > 200:
+                self.plot.enableAutoRange('xy', False)
+                self.eda_history = np.delete(self.eda_history, 0)
+                self.hr_history = np.delete(self.hr_history, 0)
+                self.temp_history = np.delete(self.temp_history, 0)
 
-        self.eda_curve.setData(self.eda_history)
-        self.hr_curve.setData(self.hr_history)
-        self.temp_curve.setData(self.temp_history)
+            self.eda_curve.setData(self.eda_history)
+            self.hr_curve.setData(self.hr_history)
+            self.temp_curve.setData(self.temp_history)
+        except ValueError as e:
+            print("Invalid Input detected!")
 
     def run_monitoring(self):
         self.mutex = QMutex()
@@ -251,6 +257,8 @@ class MonitorWindow(QMainWindow):
         
 
     def back_btn_clicked(self):
+        if self.devices_ready < len(self.participants_id):
+            self.devices_ready += 1
         self.mutex.lock()
         if self.step[0] == 0:
             self.mutex.unlock()

@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QApplication, QWidget, QMainWindow, QVBoxLayout, QHB
 from qt_helpers import *
 from qt_windows.ScanWindow import ScanWindow
 from qt_windows.MonitorWindow import MonitorWindow
-import os
+import os, traceback, serial
 
 class SetupWindow(QMainWindow):
     def __init__(self):
@@ -86,36 +86,68 @@ class SetupWindow(QMainWindow):
             self.clear_layout(self.devices_vbox)
             self.participant_widgets = []
             for i in range(1, len(ports)+1):
+
+                print (f"Testing port {ports[i-1]}")
+                try:
+                    for retries in range(3):
+                        with serial.Serial(ports[i-1], baudrate=9600, bytesize=serial.EIGHTBITS, parity=serial.PARITY_NONE, stopbits=serial.STOPBITS_ONE, timeout=10) as ser:
+                            invalids = 0
+                            for n in range(500): # Read 5s of data
+                                data = ser.readline().strip()
+                                raw_values = data.split()
+                                if len(raw_values) == 3:
+                                    hr, eda, temp = raw_values
+                                elif len(raw_values) == 4:
+                                    _, hr, eda, temp = raw_values
+                                else: 
+                                    print("Invalid data read:", raw_values)
+                                    invalids += 1
+
+                        if invalids > 20:
+                            if retries < 2:
+                                print("Too many invalid reads, trying again...")
+                            else:
+                                raise Exception("Too many invalid reads")
+                        else:
+                            break
+
+                    print("Testing passed!")
+
+                    participant_group = QVBoxLayout()
+
+                    participant_group.addWidget(get_bold_label(f"Device {i}"))
+
+                    id_row = QHBoxLayout()
+                    id_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                    id_row.addWidget(QLabel("Participant ID:"))
+                    
+                    id_edit = QLineEdit()
+                    id_row.addWidget(id_edit)
+
+                    id_row.addStretch()
+                    participant_group.addLayout(id_row)
+
+                    ser_row = QHBoxLayout()
+                    ser_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                    ser_row.addWidget(QLabel("Serial Port:"))
+                    
+                    ser_edit = QLineEdit()
+                    ser_edit.setText(ports[i-1])
+                    ser_row.addWidget(ser_edit)
+
+                    ser_row.addStretch()
+                    participant_group.addLayout(ser_row)
+
+                    self.devices_vbox.addLayout(participant_group)
+                    
+                    self.participant_widgets.append((id_edit, ser_edit))
+
+                except Exception as e:
+                    print("Oh no, error!")
+                    print(str(traceback.format_exc()))
+                    QMessageBox.warning(self, f"Error with {ports[i-1]}", str(traceback.format_exc()))
             
-                participant_group = QVBoxLayout()
-
-                participant_group.addWidget(get_bold_label(f"Device {i}"))
-
-                id_row = QHBoxLayout()
-                id_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
-                id_row.addWidget(QLabel("Participant ID:"))
                 
-                id_edit = QLineEdit()
-                id_row.addWidget(id_edit)
-
-                id_row.addStretch()
-                participant_group.addLayout(id_row)
-
-                ser_row = QHBoxLayout()
-                ser_row.setAlignment(Qt.AlignmentFlag.AlignLeft)
-                ser_row.addWidget(QLabel("Serial Port:"))
-                
-                ser_edit = QLineEdit()
-                ser_edit.setText(ports[i-1])
-                ser_row.addWidget(ser_edit)
-
-                ser_row.addStretch()
-                participant_group.addLayout(ser_row)
-
-                self.devices_vbox.addLayout(participant_group)
-                
-                self.participant_widgets.append((id_edit, ser_edit))
-
 
     def begin_btn_clicked(self):
         results = {}
