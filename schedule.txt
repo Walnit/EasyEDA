@@ -1,3 +1,8 @@
-10 baseline
-10 sesh
-10 baseline
+10 debug
+180 baseline
+480 sesh1
+180 test
+180 baseline
+480 sesh2
+120 sam
+180 baseline
