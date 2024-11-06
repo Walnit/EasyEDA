@@ -1,8 +1,3 @@
-ö
-Delay= 19552
-Source file: EDA_withMillis_noAccel_Final.ino
-Millis PPG EDA T_Skin
-
 Delay= 19552
 Source file: EDA_withMillis_noAccel_Final.ino
 Millis PPG EDA T_Skin
