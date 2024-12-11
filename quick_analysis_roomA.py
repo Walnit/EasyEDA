@@ -98,7 +98,7 @@ colus = ["Millis","Heart Rate","EDA","Temperature"]
 for id in idno:
     for i in dataSessions:
         print(bigDir + f'{i}_id-a{int(id)}.log')
-        df = pd.read_csv(bigDir + f'{i}_id-a{int(id)}.log', delimiter=" ", names=colus)[1:] 
+        df = pd.read_csv(bigDir + f'{i}_id-a{int(id)}.log', delimiter=" ", names=colus) 
         duration = int(schedule[i])
         print(duration)
         paster += give_excel_data(df, duration)
