@@ -20,9 +20,12 @@ with open(sys.argv[1]) as f:
         print("Analysing", matched.group(1))
         duration = int(matched.group(2))
     except:
-        print("Could not find section label. Continuing...")
+        print("Could not find section label. ")
+        duration = int(input("Enter section duration: "))
+
 
 og_sample_rate = len(df)/duration
+print(og_sample_rate)
 new_sample_rate = 25
 num_samples = int(new_sample_rate * duration)
 
@@ -51,7 +54,7 @@ for i in range(len(r)):
         if((r[i-1] < r[i]) and (r[i+1] < r[i])):
             r_peak_count += 1
 
-print("Total NSSCR peaks", r_peak_count)
+# print("Total NSSCR peaks", r_peak_count)
 print("NSSCR per minute", r_peak_count/(duration/60))
 print("SCR Std Deviation", np.std(r))
 
@@ -66,21 +69,21 @@ print("TVSymp Std Dev", np.std(tvsymp_signal))
 # plt.plot(eda_filtered)
 # plt.plot(eda_n)
 # plt.show()
-plt.title("NSSCR")
-plt.plot(r)
-plt.show()
-plt.title("SCL")
-plt.plot(t)
-plt.show()
-plt.title("TVSymp")
-plt.plot(tvsymp_signal)
-plt.show()
+# plt.title("NSSCR")
+# plt.plot(r)
+# plt.show()
+# plt.title("SCL")
+# plt.plot(t)
+# plt.show()
+# plt.title("TVSymp")
+# plt.plot(tvsymp_signal)
+# plt.show()
 
-fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
-ax1.set_title("NSSCR")
-ax1.plot(r)
-ax2.set_title("SCL")
-ax2.plot(t)
-ax3.set_title("TVSymp")
-ax3.plot(tvsymp_signal)
-plt.show()
+# fig, (ax1, ax2, ax3) = plt.subplots(1, 3, figsize=(15, 5))
+# ax1.set_title("NSSCR")
+# ax1.plot(r)
+# ax2.set_title("SCL")
+# ax2.plot(t)
+# ax3.set_title("TVSymp")
+# ax3.plot(tvsymp_signal)
+# plt.show()

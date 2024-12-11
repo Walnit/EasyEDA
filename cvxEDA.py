@@ -105,6 +105,7 @@ def cvxEDA(y, delta, tau0=2., tau1=0.7, delta_knot=10., alpha=8e-4, gamma=1e-2,
 
     old_options = cv.solvers.options.copy()
     cv.solvers.options.clear()
+    cv.solvers.options['show_progress'] = False
     cv.solvers.options.update(options)
     if solver == 'conelp':
         # Use conelp
