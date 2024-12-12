@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
+from pandas.errors import SettingWithCopyWarning
 from scipy.interpolate import interp1d
 import scipy.interpolate as sc_int 
 
@@ -19,6 +20,10 @@ from keras.layers import Concatenate
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler, EarlyStopping, ReduceLROnPlateau,TensorBoard
 from keras.layers import Conv1D, MaxPooling1D
 from keras.losses import binary_crossentropy
+
+import warnings
+warnings.simplefilter(action='ignore', category=SettingWithCopyWarning)
+
 
 def model_recognition(window, dropout_value = 0.05):
     
@@ -147,8 +152,13 @@ def charge_raw_data(df, x_col="rawdata", target_size_frames=64, y_col=None, freq
     while i <= len(x_signal)-window_size:
         
         denominator_norm = (np.nanmax(x_signal[i:(i+window_size)])-np.nanmin(x_signal[i:(i+window_size)]))
+        # print(f'denominator_norm: {denominator_norm}\n')
+        # print(f'nanmax: {np.nanmax(x_signal[i:(i+window_size)])}\n')
+        # print(f'nanmin: {np.nanmin(x_signal[i:(i+window_size)])}\n')
         
         x_signal_norm = (x_signal[i:(i+window_size)]-np.nanmin(x_signal[i:(i+window_size)]))/denominator_norm
+        # print(f'x_signal_norm: {x_signal_norm}\n')
+
         x_window_list.append( x_signal_norm )
         
         if y_col is not None:
