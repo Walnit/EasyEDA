@@ -15,7 +15,7 @@ import sys
 # The first row of the CSV data (after the title headers) should have the duration of the session in seconds in the Time column
 # For example, 
 # ```
-# Time,EDA,Heart Rate,Temperature
+# Time,EDA,PPG,Temp
 # 600,,,
 # 1721806894825084,19938.0,22925.0,5745.0
 # ```
@@ -41,8 +41,8 @@ print("Loaded dataframe! Duration of experiment:", duration)
 ################################
 
 df.loc[:, "EDA"] = 1 / ((1 - (2 * ((df.loc[:, "EDA"] * 2.048) / 32767) / 3.3)) * 825000) * 1000000
-df.loc[:, "Heart Rate"] = (df.loc[:, "Heart Rate"] * 2048) / 32767
-df.loc[:, "Temperature"] = df.loc[:, "Temperature"]* 2048 / 32767 / 10
+df.loc[:, "PPG"] = (df.loc[:, "PPG"] * 2048) / 32767
+df.loc[:, "Temp"] = df.loc[:, "Temp"]* 2048 / 32767 / 10
 
 ################################
 # Phase 3: Cleaning data
@@ -64,22 +64,45 @@ norm_cutoff = cutoff_frequency / nyquist
 b, a = signal.butter(16, norm_cutoff, btype='low', analog=False)
 eda_filtered = signal.filtfilt(b, a, eda_removed_outliers)
 
+
 ################################
-# Phase 4: Calculation of NSSCR
+# Phase 4: Removal of Artifacts
+# We use the works of Llanes-Jurado et al. (2023) to remove artifacts using an LSTM model.
+################################
+
+from artifact_remover import automatic_EDA_correct, EDABE_LSTM_1DCNN_Model
+
+df_correction = pd.DataFrame(
+    {
+        "Time": pd.date_range(start=0, periods=eda_filtered.size, freq=f"{1/new_sample_rate}s"),
+        "EDA": eda_filtered,
+    }
+)
+
+df_result, dict_metrics = automatic_EDA_correct(df_correction, EDABE_LSTM_1DCNN_Model, 
+                                                freq_signal=new_sample_rate, th_t_postprocess=2.5,
+                                                eda_signal="EDA", time_column="Time")
+
+print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
+eda_corrected = df_result["signal_automatic"].to_numpy()
+
+################################
+# Phase 5: Calculation of NSSCR
 # We use the works of Taylor et al. (2015) to calculate the NSSCR.
 # We use an offset of 1, a start window of 4 seconds, an end window of 4 seconds, and a threshold of 0.05.
 ################################
 
 from peak_detection import findPeaks
+
 peaks = findPeaks(
     pd.DataFrame(
         {
-            "EDA" : eda_removed_outliers, 
-            "filtered_eda" : eda_filtered
+            "EDA" : eda_corrected,
+            "filtered_eda" : eda_corrected
         },
         index=pd.date_range(
             start=0, 
-            periods=len(eda_filtered), 
+            periods=len(eda_corrected), 
             freq= '40ms' # 25Hz
         )
     ), 
@@ -103,20 +126,17 @@ d: offset and slope of the linear drift term
 e: model residuals
 obj: value of objective function being minimized (eq 15 of paper)
 """
-[r, p, t, l, d, e, obj] = cvxEDA(stats.zscore(eda_filtered), 1./new_sample_rate)
+[r, p, t, l, d, e, obj] = cvxEDA(stats.zscore(eda_corrected), 1./new_sample_rate)
 
 print("Mean SCR", p.mean())
-print("SCR Std Deviation", np.std(p))
 
 print("Mean SCL", t.mean())
-print("SCR Std Deviation", np.std(t))
 
 ################################
 # Phase 6: Calculation of TVSymp
 ################################
 
-tvsymp_signal = calculate_tvsymp_index(signal.resample(eda_filtered, 2*duration))
+tvsymp_signal = calculate_tvsymp_index(signal.resample(eda_corrected, 2*duration))
 
 print("Mean TVSympt", tvsymp_signal.mean())
-print("TVSymp Std Dev", np.std(tvsymp_signal))
 
