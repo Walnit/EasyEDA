@@ -11,6 +11,7 @@ from cvxEDA import cvxEDA
 from tvsymp import apply_band_pass_filter, calculate_tvsymp_index
 from peak_detection import findPeaks
 from artifact_remover import automatic_EDA_correct, EDABE_LSTM_1DCNN_Model
+from EDASympn import calculate_edasymp_index
 
 import re
 import sys
@@ -106,12 +107,21 @@ def give_excel_data(df, duration):
     ################################
     tvsymp_signal = calculate_tvsymp_index(signal.resample(eda_corrected, 2*duration))
     print("Mean TVSympt", tvsymp_signal.mean())
+
+    print(eda_corrected)
+    print(type(eda_corrected))
+
+    [edasymp, edasympn, psd] = calculate_edasymp_index(eda_corrected, 25)
+
+    # print("edasymp", edasymp)
+    # print("psd", psd)
+    print("edasympn:", edasympn)
     
     return f'{peaks / (duration/60)}\t{p.mean()}\t{t.mean()}\t{tvsymp_signal.mean()}'
 
 
 
-dataSessions = [1,2,4,5]
+dataSessions = [1]
 schedule = [0, 120, 420, 0, 120, 420] if (int(sys.argv[3])) else [0, 180, 480, 0, 180, 480]
 print(schedule)
 idno = sys.argv[2].split(",")

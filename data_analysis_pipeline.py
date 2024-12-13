@@ -5,6 +5,7 @@ from scipy import signal
 from scipy import stats
 from cvxEDA import cvxEDA
 from tvsymp import apply_band_pass_filter, calculate_tvsymp_index
+from EDASympn import calculate_edasymp_index
 
 import re
 import sys
@@ -103,10 +104,10 @@ peaks = findPeaks(
         index=pd.date_range(
             start=0, 
             periods=len(eda_corrected), 
-            freq= '40ms' # 25Hz
+            freq= '40ms' # 25H
         )
     ), 
-    1*25, 4, 4, 0.05, 25
+    2, 3.5, 10, 0.05, 25
 )[0].sum()
 
 print("Peaks Per Minute:", peaks / (duration/60))
@@ -140,3 +141,19 @@ tvsymp_signal = calculate_tvsymp_index(signal.resample(eda_corrected, 2*duration
 
 print("Mean TVSympt", tvsymp_signal.mean())
 
+################################
+# Phase 7: Calculation of EDASymp and EDASymp normalized (EDASympn)
+# We reimplemented the functions from the works of Posada-Quintero, H.F., Florian, J.P., Orjuela-Cañón, A.D. et al. Power Spectral Density Analysis of Electrodermal Activity for Sympathetic Function Assessment. Ann Biomed Eng 44, 3124–3135 (2016). https://doi.org/10.1007/s10439-016-1606-6
+# We also utilised some of the works of NeuroKit2
+# Function header: def calculate_edasymp_index(eda, samp_rate, nperseg = 128, freq_band = [0.045, 0.25]):
+
+# psd is power spectral density (np array)
+# edasymp is spectral dynamics in the frequency range of 0.045–.25 Hz -> which is basically integrated psd values within the frequency range (float)
+# edasympn is normalized edasymp via max psd value
+################################
+
+[edasymp, edasympn, psd] = calculate_edasymp_index(eda_corrected, 25)
+
+# print("edasymp:", edasymp)
+# print("psd", psd)
+print("edasympn:", edasympn)
