@@ -14,7 +14,7 @@ def calculate_edasymp_index(eda, samp_rate, nperseg = 128, freq_band = [0.045, 0
 
     freq, pow = welch(eda, fs=samp_rate, window="blackman", nperseg=nperseg, noverlap=noverlap)
     psd = pd.DataFrame({"Frequency": freq, "Power": pow})
-    print(psd)
+    # print(psd)
 
     #calculate EDASymp
     where = (psd["Frequency"] >= freq_band[0]) & (psd["Frequency"] < freq_band[1])

@@ -12,6 +12,8 @@ from tvsymp import apply_band_pass_filter, calculate_tvsymp_index
 from peak_detection import findPeaks
 from artifact_remover import automatic_EDA_correct, EDABE_LSTM_1DCNN_Model
 from EDASympn import calculate_edasymp_index
+from window_segmentation import get_segmented_list
+
 import re
 import sys
 import warnings
@@ -28,7 +30,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 #         duration = int(matched.group(2))
 #     except:
 #         print("Could not find section label. Continuing...")
-def give_excel_data(df, duration):
+def give_list_of_segmented_processed_EDA(df, duration, window_dur, overlap_dur):
     df.loc[:, "EDA"] = 1 / ((1 - (2 * ((df.loc[:, "EDA"] * 2.048) / 32767) / 3.3)) * 825000) * 1000000
     df.loc[:, "PPG"] = (df.loc[:, "PPG"] * 2048) / 32767
     df.loc[:, "Temp"] = df.loc[:, "Temp"]* 2048 / 32767 / 10
@@ -62,12 +64,11 @@ def give_excel_data(df, duration):
     #                                                 freq_signal=new_sample_rate, th_t_postprocess=2.5,
     #                                                 eda_signal="EDA", time_column="Time")
     # print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
-    # eda_corrected = df_result["signal_automatic"].to_numpy()
-    # print(eda_corrected)
     eda_corrected = eda_filtered
-    return give_eda_stats(eda_corrected, duration, new_sample_rate)
+    return get_segmented_list(pd.DataFrame({"EDA":eda_corrected}).EDA, duration, window_dur, overlap_dur), new_sample_rate
     
     #For data that doesn't work with LSTM (For some reason - skip lstm)
+    # eda_corrected = eda_filtered
 def give_eda_stats(eda_corrected, duration, new_sample_rate):
     peaks = findPeaks(
             pd.DataFrame(
@@ -81,7 +82,7 @@ def give_eda_stats(eda_corrected, duration, new_sample_rate):
                     freq= '40ms' # 25Hz
                     )
                 ), 
-            2, 4, 10, 0.05, 25
+            2, 4, 10, 0.00, 25
             )[0].sum()
     print("Peaks Per Minute:", peaks / (duration/60))
     """
@@ -102,8 +103,8 @@ def give_eda_stats(eda_corrected, duration, new_sample_rate):
     tvsymp_signal = calculate_tvsymp_index(signal.resample(eda_corrected, 2*duration))
     print("Mean TVSympt", tvsymp_signal.mean())
 
-    print(eda_corrected)
-    print(type(eda_corrected))
+    # print(eda_corrected)
+    # print(type(eda_corrected))
 
     down_eda = signal.decimate(eda_corrected, 12)
 
@@ -113,7 +114,7 @@ def give_eda_stats(eda_corrected, duration, new_sample_rate):
     # print("edasymp:", edasymp)
     print("edasymp_n:", edasympn)
     
-    return f'{peaks / (duration/60)}\t{p.mean()}\t{t.mean()}\t{tvsymp_signal.mean()}\t{edasympn}'
+    return f'{peaks / (duration/60)}\n{p.mean()}\n{t.mean()}\n{tvsymp_signal.mean()}\n{edasympn}'
 
 
 
@@ -125,16 +126,23 @@ idno = sys.argv[2].split(",")
 bigDir = f'Turner_Data/Room_A/exp{sys.argv[1]}/'
 paster = ''
 colus = ["Millis","PPG","EDA","Temp"]
+window_duration = 90
+overlap_duration = 30
 for id in idno:
+    paster += "ID Data:\n"
     for i in dataSessions:
-        print(bigDir + f'{i}_id-a{int(id)}.log')
+        paster += "DATASESSION: "+f'{i}_id-a{int(id)}.log\n'
+        # print("DATASESSION: "+f'{i}_id-a{int(id)}.log')
         df = pd.read_csv(bigDir + f'{i}_id-a{int(id)}.log', delimiter=" ", names=colus) 
         duration = int(schedule[i])
         print(duration)
-        paster += give_excel_data(df, duration)
-        paster += '\t'
-
-    paster += '\n'
+        listo, samp = give_list_of_segmented_processed_EDA(df, duration, window_duration, overlap_duration)
+        for l in listo:
+            # print(l)
+            paster += "Segment Start:\n"
+            paster += give_eda_stats(l, window_duration, samp)
+            paster+= "\n"
+    paster += "\n" 
 
 print(paster)
 
