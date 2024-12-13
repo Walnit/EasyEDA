@@ -111,13 +111,15 @@ def give_excel_data(df, duration):
     print(eda_corrected)
     print(type(eda_corrected))
 
-    [edasymp, edasympn, psd] = calculate_edasymp_index(eda_corrected, 25)
+    down_eda = signal.decimate(eda_corrected, 12)
 
-    # print("edasymp", edasymp)
+    [edasymp, edasympn, psd] = calculate_edasymp_index(down_eda, 2)
+
     # print("psd", psd)
-    print("edasympn:", edasympn)
+    print("edasymp:", edasymp)
+    print("edasymp_n:", edasympn)
     
-    return f'{peaks / (duration/60)}\t{p.mean()}\t{t.mean()}\t{tvsymp_signal.mean()}'
+    return f'{peaks / (duration/60)}\t{p.mean()}\t{t.mean()}\t{tvsymp_signal.mean()}\t{edasympn}'
 
 
 

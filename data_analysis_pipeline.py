@@ -152,8 +152,11 @@ print("Mean TVSympt", tvsymp_signal.mean())
 # edasympn is normalized edasymp via max psd value
 ################################
 
-[edasymp, edasympn, psd] = calculate_edasymp_index(eda_corrected, 25)
+#Downsampling corrected eda data from 25hz to around 2hz (2.008)
+down_eda = signal.decimate(eda_corrected, 12)
 
-# print("edasymp:", edasymp)
+[edasymp, edasympn, psd] = calculate_edasymp_index(down_eda, 2)
+
 # print("psd", psd)
-print("edasympn:", edasympn)
+print("edasymp:", edasymp)
+print("edasymp_n:", edasympn)
