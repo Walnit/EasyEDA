@@ -63,7 +63,7 @@ def give_excel_data(df, duration):
     #                                                 eda_signal="EDA", time_column="Time")
     # print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
     # eda_corrected = df_result["signal_automatic"].to_numpy()
-    # print(eda_corrected)
+
     eda_corrected = eda_filtered
     return give_eda_stats(eda_corrected, duration, new_sample_rate)
     
