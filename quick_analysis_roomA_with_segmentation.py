@@ -5,6 +5,7 @@ import pandas as pd
 import os
 os.environ['TF_ENABLE_ONEDNN_OPTS'] = '0'
 
+from pandas.core import window
 from scipy import signal
 from scipy import stats
 from cvxEDA import cvxEDA
@@ -54,24 +55,25 @@ def give_list_of_segmented_processed_EDA(df, duration, window_dur, overlap_dur):
     b, a = signal.butter(16, norm_cutoff, btype='low', analog=False)
     eda_filtered = signal.filtfilt(b, a, eda_removed_outliers)
 
-    df_correction = pd.DataFrame(
-            {
-                "Time": pd.date_range(start=0, periods=eda_filtered.size, freq=f"{1/new_sample_rate}s"),
-                "EDA": eda_filtered,
-                }
-            )
-    df_result, dict_metrics = automatic_EDA_correct(df_correction, EDABE_LSTM_1DCNN_Model, 
-                                                    freq_signal=new_sample_rate, th_t_postprocess=2.5,
-                                                    eda_signal="EDA", time_column="Time")
-    print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
-    eda_corrected = df_result["signal_automatic"].to_numpy()
-    # eda_corrected = eda_filtered
+    # df_correction = pd.DataFrame(
+    #         {
+    #             "Time": pd.date_range(start=0, periods=eda_filtered.size, freq=f"{1/new_sample_rate}s"),
+    #             "EDA": eda_filtered,
+    #             }
+    #         )
+    # df_result, dict_metrics = automatic_EDA_correct(df_correction, EDABE_LSTM_1DCNN_Model, 
+    #                                                 freq_signal=new_sample_rate, th_t_postprocess=2.5,
+    #                                                 eda_signal="EDA", time_column="Time")
+    # print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
+    # eda_corrected = df_result["signal_automatic"].to_numpy()
+
+    #For data that doesn't work with LSTM (For some reason - skip lstm)
+    eda_corrected = eda_filtered
+
     print("Zucchini:",get_segmented_list(pd.DataFrame({"EDA":eda_corrected}).EDA, duration, window_dur, overlap_dur))
 
     return get_segmented_list(pd.DataFrame({"EDA":eda_corrected}).EDA, duration, window_dur, overlap_dur), new_sample_rate
     
-    #For data that doesn't work with LSTM (For some reason - skip lstm)
-    # eda_corrected = eda_filtered
 def give_eda_stats(eda_corrected, duration, new_sample_rate):
     peaks = findPeaks(
             pd.DataFrame(
@@ -116,8 +118,18 @@ def give_eda_stats(eda_corrected, duration, new_sample_rate):
     # print("psd", psd)
     # print("edasymp:", edasymp)
     print("edasymp_n:", edasympn)
+
+    data = [
+        peaks / (duration / 60),
+        p.mean(),
+        t.mean(),
+        tvsymp_signal.mean(),
+        edasympn
+    ]
     
-    return f'{peaks / (duration/60)}\n{p.mean()}\n{t.mean()}\n{tvsymp_signal.mean()}\n{edasympn}'
+    # return f'{peaks / (duration/60)}\n{p.mean()}\n{t.mean()}\n{tvsymp_signal.mean()}\n{edasympn}'
+    # return f'{peaks / (duration/60)}\n{p.mean()}\n{t.mean()}\n{tvsymp_signal.mean()}\n{edasympn}
+    return data;
 
 
 
@@ -130,9 +142,12 @@ bigDir = f'Turner_Data/Room_A/exp{sys.argv[1]}/'
 paster = ''
 colus = ["Millis","PPG","EDA","Temp"]
 window_duration = schedule[1]
-overlap_duration = schedule[1]/2
+overlap_duration = int(schedule[1]/2)
+print(f'wind_dur: {window_duration}\toverlap_dur:{overlap_duration}')
+biggerD = pd.DataFrame()
 for id in idno:
     paster += "ID Data:\n"
+    colf = pd.DataFrame()
     for i in dataSessions:
         paster += "DATASESSION: "+f'{i}_id-a{int(id)}.log\n'
         # print("DATASESSION: "+f'{i}_id-a{int(id)}.log')
@@ -140,15 +155,18 @@ for id in idno:
         duration = int(schedule[i])
         print(duration)
         listo, samp = give_list_of_segmented_processed_EDA(df, duration, window_duration, overlap_duration)
+        colf = pd.concat([colf, pd.DataFrame(["skib"], columns=[f'a{id}'])], ignore_index=True)
         for l in listo:
             # print(l)
-            paster += "Segment Start:\n"
-            paster += give_eda_stats(l.to_numpy(), window_duration, samp)
-            paster+= "\n"
-    paster += "\n" 
-
-print(paster)
-
+            # paster += "Segment Start:\n"
+            data = give_eda_stats(l.to_numpy(), window_duration, samp)
+            skibf = pd.DataFrame(data, columns=[f'a{id}']);
+            colf = pd.concat([colf, skibf], ignore_index=True)
+            # paster+= "\n" 
+    biggerD.loc[:, f'a{id}'] = colf.loc[:,colf.columns[0]]
+    # paster += "\n" 
+print(biggerD)
+biggerD.to_csv(f"{sys.argv[2]}.csv", index=False)
 # plt.legend(['eda_resampled', 'eda_filtered', 'eda_n', 'r', 'p', 't'])
 # plt.plot(eda_filtered)
 # plt.plot(eda_n)

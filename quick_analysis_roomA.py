@@ -19,9 +19,7 @@ warnings.simplefilter(action='ignore', category=FutureWarning)
 
 
 
-# with open(sys.argv[1]) as f:
-#     _ = f.readline() # ignore schema
-#     try:
+# with open(sys.argv[1]) as f: _ = f.readline() # ignore schema try:
 #         to_match = f.readline()
 #         matched = re.search(r"BEGIN (.+?) FOR ([0-9]+?) SECONDS", to_match)
 #         print("Analysing", matched.group(1))
@@ -113,7 +111,17 @@ def give_eda_stats(eda_corrected, duration, new_sample_rate):
     # print("edasymp:", edasymp)
     print("edasymp_n:", edasympn)
     
-    return f'{peaks / (duration/60)}\t{p.mean()}\t{t.mean()}\t{tvsymp_signal.mean()}\t{edasympn}'
+    data = [
+        peaks / (duration / 60),
+        p.mean(),
+        t.mean(),
+        tvsymp_signal.mean(),
+        edasympn
+    ]
+    
+    # print("Jimmybidi:",pd.DataFrame(data, columns=["Values"])) 
+    # return pd.DataFrame(data, columns=["Values"])  # Single-column DataFrame
+    return data;
 
 
 
@@ -124,19 +132,22 @@ idno = sys.argv[2].split(",")
 # print(idno)
 bigDir = f'Turner_Data/Room_A/exp{sys.argv[1]}/'
 paster = ''
+biggerD = pd.DataFrame()
 colus = ["Millis","PPG","EDA","Temp"]
 for id in idno:
+    colf = pd.DataFrame()
     for i in dataSessions:
         print(bigDir + f'{i}_id-a{int(id)}.log')
         df = pd.read_csv(bigDir + f'{i}_id-a{int(id)}.log', delimiter=" ", names=colus) 
         duration = int(schedule[i])
         print(duration)
-        paster += give_excel_data(df, duration)
-        paster += '\t'
-
-    paster += '\n'
-
-print(paster)
+        data = give_excel_data(df, duration)
+        skibf = pd.DataFrame(data, columns=[f'a{id}']);
+        colf = pd.concat([colf, pd.DataFrame(["skib"], columns=[f'a{id}'])], ignore_index=True)
+        colf = pd.concat([colf, skibf], ignore_index=True)
+    biggerD.loc[:, f'a{id}'] = colf.loc[:,colf.columns[0]]
+print(biggerD)
+biggerD.to_csv(f"{sys.argv[2]}.csv", index=False)
 
 # plt.legend(['eda_resampled', 'eda_filtered', 'eda_n', 'r', 'p', 't'])
 # plt.plot(eda_filtered)

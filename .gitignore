@@ -3,6 +3,7 @@ __pycache__/
 skibidi/
 *.py[cod]
 *$py.class
+copy_csv/
 
 # C extensions
 *.so
