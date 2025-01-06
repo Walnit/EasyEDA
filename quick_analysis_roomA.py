@@ -52,19 +52,19 @@ def give_excel_data(df, duration):
     b, a = signal.butter(16, norm_cutoff, btype='low', analog=False)
     eda_filtered = signal.filtfilt(b, a, eda_removed_outliers)
 
-    # df_correction = pd.DataFrame(
-    #         {
-    #             "Time": pd.date_range(start=0, periods=eda_filtered.size, freq=f"{1/new_sample_rate}s"),
-    #             "EDA": eda_filtered,
-    #             }
-    #         )
-    # df_result, dict_metrics = automatic_EDA_correct(df_correction, EDABE_LSTM_1DCNN_Model, 
-    #                                                 freq_signal=new_sample_rate, th_t_postprocess=2.5,
-    #                                                 eda_signal="EDA", time_column="Time")
-    # print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
-    # eda_corrected = df_result["signal_automatic"].to_numpy()
+    df_correction = pd.DataFrame(
+            {
+                "Time": pd.date_range(start=0, periods=eda_filtered.size, freq=f"{1/new_sample_rate}s"),
+                "EDA": eda_filtered,
+                }
+            )
+    df_result, dict_metrics = automatic_EDA_correct(df_correction, EDABE_LSTM_1DCNN_Model, 
+                                                    freq_signal=new_sample_rate, th_t_postprocess=2.5,
+                                                    eda_signal="EDA", time_column="Time")
+    print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
+    eda_corrected = df_result["signal_automatic"].to_numpy()
 
-    eda_corrected = eda_filtered
+    # eda_corrected = eda_filtered
     return give_eda_stats(eda_corrected, duration, new_sample_rate)
     
     #For data that doesn't work with LSTM (For some reason - skip lstm)

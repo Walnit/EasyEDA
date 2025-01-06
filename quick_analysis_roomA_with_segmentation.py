@@ -54,17 +54,20 @@ def give_list_of_segmented_processed_EDA(df, duration, window_dur, overlap_dur):
     b, a = signal.butter(16, norm_cutoff, btype='low', analog=False)
     eda_filtered = signal.filtfilt(b, a, eda_removed_outliers)
 
-    # df_correction = pd.DataFrame(
-    #         {
-    #             "Time": pd.date_range(start=0, periods=eda_filtered.size, freq=f"{1/new_sample_rate}s"),
-    #             "EDA": eda_filtered,
-    #             }
-    #         )
-    # df_result, dict_metrics = automatic_EDA_correct(df_correction, EDABE_LSTM_1DCNN_Model, 
-    #                                                 freq_signal=new_sample_rate, th_t_postprocess=2.5,
-    #                                                 eda_signal="EDA", time_column="Time")
-    # print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
-    eda_corrected = eda_filtered
+    df_correction = pd.DataFrame(
+            {
+                "Time": pd.date_range(start=0, periods=eda_filtered.size, freq=f"{1/new_sample_rate}s"),
+                "EDA": eda_filtered,
+                }
+            )
+    df_result, dict_metrics = automatic_EDA_correct(df_correction, EDABE_LSTM_1DCNN_Model, 
+                                                    freq_signal=new_sample_rate, th_t_postprocess=2.5,
+                                                    eda_signal="EDA", time_column="Time")
+    print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
+    eda_corrected = df_result["signal_automatic"].to_numpy()
+    # eda_corrected = eda_filtered
+    print("Zucchini:",get_segmented_list(pd.DataFrame({"EDA":eda_corrected}).EDA, duration, window_dur, overlap_dur))
+
     return get_segmented_list(pd.DataFrame({"EDA":eda_corrected}).EDA, duration, window_dur, overlap_dur), new_sample_rate
     
     #For data that doesn't work with LSTM (For some reason - skip lstm)
@@ -126,8 +129,8 @@ idno = sys.argv[2].split(",")
 bigDir = f'Turner_Data/Room_A/exp{sys.argv[1]}/'
 paster = ''
 colus = ["Millis","PPG","EDA","Temp"]
-window_duration = 90
-overlap_duration = 30
+window_duration = schedule[1]
+overlap_duration = schedule[1]/2
 for id in idno:
     paster += "ID Data:\n"
     for i in dataSessions:
@@ -140,7 +143,7 @@ for id in idno:
         for l in listo:
             # print(l)
             paster += "Segment Start:\n"
-            paster += give_eda_stats(l, window_duration, samp)
+            paster += give_eda_stats(l.to_numpy(), window_duration, samp)
             paster+= "\n"
     paster += "\n" 
 
