@@ -48,12 +48,12 @@ files_to_analyze = (
     #     "Turner_Data/Room_B/Batch_3/3_usb0.csv",
     #     "Turner_Data/Room_B/Batch_3/4_usb0.csv",
     # ),
-    (
-        "Turner_Data/Room_B/Batch_3/0_usb1.csv",
-        "Turner_Data/Room_B/Batch_3/1_usb1.csv",
-        "Turner_Data/Room_B/Batch_3/3_usb1.csv",
-        "Turner_Data/Room_B/Batch_3/4_usb1.csv",
-    ),
+    # (
+    #     "Turner_Data/Room_B/Batch_3/0_usb1.csv",
+    #     "Turner_Data/Room_B/Batch_3/1_usb1.csv",
+    #     "Turner_Data/Room_B/Batch_3/3_usb1.csv",
+    #     "Turner_Data/Room_B/Batch_3/4_usb1.csv",
+    # ),
     # (
     #     "Turner_Data/Room_B/Batch_3/0_usb2.csv",
     #     "Turner_Data/Room_B/Batch_3/1_usb2.csv",
@@ -217,22 +217,22 @@ def give_list_of_segmented_processed_EDA(df, duration, window_dur, overlap_dur):
     # We use the works of Llanes-Jurado et al. (2023) to remove artifacts using an LSTM model.
     ################################
 
-    df_correction = pd.DataFrame(
-        {
-            "Time": pd.date_range(start=0, periods=eda_filtered.size, freq=f"{1/new_sample_rate}s"),
-            "EDA": eda_filtered,
-        }
-    )
+    # df_correction = pd.DataFrame(
+    #     {
+    #         "Time": pd.date_range(start=0, periods=eda_filtered.size, freq=f"{1/new_sample_rate}s"),
+    #         "EDA": eda_filtered,
+    #     }
+    # )
 
-    df_result, dict_metrics = automatic_EDA_correct(df_correction, EDABE_LSTM_1DCNN_Model, 
-                                                    freq_signal=new_sample_rate, th_t_postprocess=2.5,
-                                                    eda_signal="EDA", time_column="Time")
+    # df_result, dict_metrics = automatic_EDA_correct(df_correction, EDABE_LSTM_1DCNN_Model, 
+    #                                                 freq_signal=new_sample_rate, th_t_postprocess=2.5,
+    #                                                 eda_signal="EDA", time_column="Time")
 
-    print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
-    eda_corrected = df_result["signal_automatic"].to_numpy()
+    # print("No. of artifacts corrected: ", dict_metrics["number_of_artifacts"])
+    # eda_corrected = df_result["signal_automatic"].to_numpy()
 
     # WORKAROUND FOR COMMENTING THIS PART OUT
-    # eda_corrected = eda_filtered
+    eda_corrected = eda_filtered
     return get_segmented_list(pd.DataFrame({"EDA":eda_corrected}).EDA, duration, window_dur, overlap_dur), new_sample_rate
 
 
@@ -257,7 +257,7 @@ def give_eda_stats(eda_corrected, duration, new_sample_rate, stage_results):
                 ), 
             2, 4, 10, 0.00, 25
             )[0].sum()
-    print("Peaks Per Minute:", peaks / (duration/60))
+    # print("Peaks Per Minute:", peaks / (duration/60))
     stage_results.append(peaks / (duration/60))
     ################################
     # Calculations via cvxEDA
@@ -349,14 +349,17 @@ for participant in files_to_analyze:
 
 
         for l in listo:
-            give_eda_stats(l, window_duration, samp, stage_results)
+            give_eda_stats(l.to_numpy(), window_duration, samp, stage_results)
+
+        stage_results.append("SEPARATOR")
 
     participant_results.append(stage_results)
 
 print(participant_results)
 
 result_df = pd.DataFrame(columns=list(range(len(participant_results[0]))))
-for row in participant_results:
+for i, row in enumerate(participant_results):
+    print(i)
     result_df = pd.concat([result_df, pd.DataFrame([row], columns=result_df.columns)], ignore_index=True)
 
-result_df.to_csv("results.csv")
+result_df.T.to_csv("results.csv")
